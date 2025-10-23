@@ -7,16 +7,9 @@ import ast
 import json
 
 class envvarsenum:
-    NTID = "NT_USERNAME"
-    NTPASS = "NT_PASSWORD"
-    NTPASS_HIDDEN = "NT_PASSWORD_HIDDEN"
-    CLIENTID = "MCP_CLIENT_ID"
-    CLIENTSECRECT = "MCP_CLIENT_SECRET"
-    PROXYENABLE = "USE_PROXY"
-    PRODMODE = "PRODUCTION"
-    CCM_URL = "CCM_URL"
-    ENCRYPTKEY = "SECRET_KEY"
-    DEVMATE_KB_PAT = "DEVMATE_KNOWLEDGE_BASE_PAT"
+    MCP_JWT = "MCP_JWT"
+    PROXYENABLE = "PROXYENABLE"
+    CMC_API_KEY = "COIN_MARKETCAP_API_KEY"
 
 def get_resource_path(relative_path: str) -> str:
     if getattr(sys, 'frozen', False):
@@ -98,20 +91,11 @@ def load_env():
     else:
         print("Failed to load .env")
         sys.exit(1)
-
-    decpass = get_password(os.getenv(envvarsenum.NTPASS, ""))    
     envvars = {
-        envvarsenum.NTID            : os.getenv("NT_USERNAME", ""),
-        envvarsenum.NTPASS          : decpass,
-        envvarsenum.CLIENTID        : os.getenv("MCP_CLIENT_ID", "68b7b33050a5fee589bb1292"),
-        envvarsenum.CLIENTSECRECT   : os.getenv("MCP_CLIENT_SECRET", ""),
-        envvarsenum.PROXYENABLE     : os.getenv("USE_PROXY", "True").lower() in ("true", "1", "yes"),
-        envvarsenum.PRODMODE        : os.getenv("PRODUCTION", "False").lower() in ("true", "1", "yes"),
-        envvarsenum.CCM_URL         : os.getenv("CCM_URL_DEV", ""),
-        envvarsenum.DEVMATE_KB_PAT : os.getenv("DEVMATE_KNOWLEDGE_BASE_PAT", ""),
+        envvarsenum.MCP_JWT            : os.getenv("MCP_JWT", ""),
+        envvarsenum.PROXYENABLE        : os.getenv("PROXYENABLE", "false").lower() == "true",
+        envvarsenum.CMC_API_KEY        : os.getenv("COIN_MARKETCAP_API_KEY", "")
     }
-    if os.getenv("PRODUCTION", "False").lower() in ("true", "1", "yes"):
-        envvars[envvarsenum.CCM_URL] = os.getenv("CCM_URL_PROD","")
     return envvars
 
 def gen_tool_description():

@@ -28,13 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 production_banner = """
-    C S W   I N T E G R A T I O N   A G E N T (V1.0)
+    ELENA POWERFUL TOOL
 """
 print(production_banner)
     
 
 ### SPECIFIC SETTINGS FOR DEVMATE
-MCP_SOCKET_URL = "wss://api.xiaozhi.me/mcp/?token="
+MCP_SOCKET_URL = "wss://api.xiaozhi.me/mcp/?token=" + envvars[envvarsenum.MCP_JWT]
 PROXY_URL = "http://127.0.0.1:3128"
 NAMESPACE     = ""
 INITIAL_DELAY = 1    # seconds
