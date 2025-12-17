@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}User Portal - Xiaozhi MCP{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>User Registration Portal</h2>
+    <p class="subtitle">Register your URL to access MCP services</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Register Your URL</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('register_user') }}" class="form">
+            <div class="form-group">
+                <label for="user_url">URL *</label>
+                <input 
+                    type="url" 
+                    id="user_url" 
+                    name="user_url" 
+                    placeholder="wss://api.xiaozhi.me/mcp/?token=xxx"
+                    required
+                    pattern="wss?://.+"
+                    class="form-control"
+                >
+                <small class="form-text">Enter a valid URL starting with wss://</small>
+            </div>
+            <div class="form-group">
+                <label for="user_email">Email Address *</label>
+                <input 
+                    type="email" 
+                    id="user_email" 
+                    name="user_email" 
+                    placeholder="your.email@example.com"
+                    required
+                    class="form-control"
+                >
+                <small class="form-text">Enter a valid email address</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Register URL</button>
+        </form>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <h3>Active tools: {{ tools|length }}</h3>
+    </div>
+    <div class="card-body">
+        {% if tools %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Tool name</th>
+                        <th>Tool Type</th>
+                        <th>Last Update</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tool in tools %}
+                    <tr>
+                        <td>{{ tool.tool_name }}</td>
+                        <td>
+                            {% if tool.is_premium %}
+                                Premium <span title="Premium"><span style="color:#00bcd4;">&#128142;</span></span>
+                            {% else %}
+                                Standard
+                            {% endif %}
+                        </td>
+                        <td>{{ tool.last_update.strftime('%Y-%m-%d %H:%M') if tool.last_update else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state">No tools registered yet.</p>
+        {% endif %}
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <h3>Active users: {{ users|length }}</h3>
+    </div>
+    <div class="card-body">
+        {% if users %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>User Type</th>
+                        <th>Last Update</th>
+                        <th>URL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            {% set email = user.user_email %}
+                            {% if email and '@' in email %}
+                                {% set parts = email.split('@') %}
+                                {% set local = parts[0] %}
+                                {% set domain = parts[1] %}
+                                {% set ext = '' %}
+                                {% if '.' in domain %}
+                                    {% set ext = '.' + domain.split('.')[-1] %}
+                                {% endif %}
+                                {{ local[:4] ~ '****' ~ ext }}
+                            {% else %}
+                                {{ email }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_premium %}
+                                Premium <span title="Premium"><span style="color:#00bcd4;">&#128142;</span></span>
+                            {% else %}
+                                Standard
+                            {% endif %}
+                        </td>
+                        <td>{{ user.last_update.strftime('%Y-%m-%d %H:%M') if user.last_update else 'N/A' }}</td>
+                        <td>
+                            {% if user.user_url and user.user_url|length > 10 %}
+                                ...{{ user.user_url[-10:] }}
+                            {% else %}
+                                {{ user.user_url }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state">No users registered yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

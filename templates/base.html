@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Xiaozhi MCP Hub{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>Xiaozhi MCP Hub</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('user_page') }}" {% if request.endpoint == 'user_page' %}class="active"{% endif %}>User Portal</a></li>
+                <li><a href="{{ url_for('get_premium') }}" {% if request.endpoint == 'get_premium' %}class="active"{% endif %}>Get Premium <span title="Premium"><span style="color:#00bcd4;">&#128142;</span></a></li>
+                <li><a href="{{ url_for('admin_page') }}" {% if request.endpoint == 'admin_page' %}class="active"{% endif %}>Admin Panel</a></li>
+                {% if session.get('admin_logged_in') %}
+                <li><a href="{{ url_for('admin_logout') }}" style="color: #dc3545;">Logout ({{ session.get('admin_username') }})</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                            <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Xiaozhi MCP Hub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.remove();
+                }, 300);
+            });
+        }, 5000);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

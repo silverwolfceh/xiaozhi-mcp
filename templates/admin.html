@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Xiaozhi MCP{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Admin Dashboard</h2>
+    <p class="subtitle">Manage users, tools, and associations</p>
+</div>
+
+<!-- Statistics -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>{{ user_count }}</h3>
+        <p>Total Users</p>
+    </div>
+    <div class="stat-card">
+        <h3>{{ tool_count }}</h3>
+        <p>Total Tools</p>
+    </div>
+</div>
+
+<!-- Tool Management Section -->
+<div class="card">
+    <div class="card-header">
+        <h3>Tool Management</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('create_tool') }}" class="form inline-form">
+            <div class="form-group">
+                <input 
+                    type="text" 
+                    name="tool_name" 
+                    placeholder="Tool name (e.g., search_airbag_component_knowledge)"
+                    required
+                    class="form-control"
+                >
+            </div>
+            <button type="submit" class="btn btn-primary">Add Tool</button>
+        </form>
+
+        {% if tools %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tool Name</th>
+                        <th>Status</th>
+                        <th>Last Update</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tool in tools %}
+                    <tr>
+                        <td>{{ tool.tool_id }}</td>
+                        <td><code>{{ tool.tool_name }}</code></td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if tool.tool_enable else 'danger' }}">
+                                {{ 'Enabled' if tool.tool_enable else 'Disabled' }}
+                            </span>
+                        </td>
+                        <td>{{ tool.last_update.strftime('%Y-%m-%d %H:%M') if tool.last_update else 'N/A' }}</td>
+                        <td class="actions">
+                            <form method="POST" action="{{ url_for('toggle_tool', tool_id=tool.tool_id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-secondary">
+                                    {{ 'Disable' if tool.tool_enable else 'Enable' }}
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('delete_tool', tool_id=tool.tool_id) }}" 
+                                  style="display:inline;" 
+                                  onsubmit="return confirm('Delete tool {{ tool.tool_name }}?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('make_premium', tool_id=tool.tool_id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-info">
+                                    {{ 'Premium' if tool.is_premium else 'Standard' }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state">No tools registered yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User Management Section -->
+<div class="card">
+    <div class="card-header">
+        <h3>User Management</h3>
+    </div>
+    <div class="card-body">
+        {% if users %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Last Update</th>
+                        <th>Actions</th>
+                        <th>URL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.user_id }}</td>
+                        <td>{{ user.user_email }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if user.user_enable else 'danger' }}">
+                                {{ 'Enabled' if user.user_enable else 'Disabled' }}
+                            </span>
+                        </td>
+                        <td>{{ user.last_update.strftime('%Y-%m-%d %H:%M') if user.last_update else 'N/A' }}</td>
+                        <td class="actions">
+                            <form method="POST" action="{{ url_for('toggle_user', user_id=user.user_id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-secondary">
+                                    {{ 'Disable' if user.user_enable else 'Enable' }}
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('delete_user', user_id=user.user_id) }}" 
+                                  style="display:inline;" 
+                                  onsubmit="return confirm('Delete user {{ user.user_id }}?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('make_user_premium', user_id=user.user_id) }}" 
+                                  style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-info">
+                                    {{ 'Premium' if user.is_premium else 'Standard' }}
+                                </button>
+                            </form>
+                            <button class="btn btn-sm btn-info" onclick="showUserTools({{ user.user_id }})">Tools</button>
+                        </td>
+                        <td><a href="{{ user.user_url }}" target="_blank">
+                            {% if user.user_url and user.user_url|length > 10 %}
+                                ...{{ user.user_url[-10:] }}
+                            {% else %}
+                                {{ user.user_url }}
+                            {% endif %}
+                        </a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state">No users registered yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User-Tool Association Section -->
+<div class="card">
+    <div class="card-header">
+        <h3>Manual Tool Association</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_connection') }}" class="form form-grid">
+            <div class="form-group">
+                <label for="user_id">User ID</label>
+                <select name="user_id" id="user_id" class="form-control" required>
+                    <option value="">Select User</option>
+                    {% for user in users %}
+                    <option value="{{ user.user_id }}">{{ user.user_id }} - {{ user.user_url[:50] }}...</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tool_id">Tool ID</label>
+                <select name="tool_id" id="tool_id" class="form-control" required>
+                    <option value="">Select Tool</option>
+                    {% for tool in tools %}
+                    <option value="{{ tool.tool_id }}">{{ tool.tool_id }} - {{ tool.tool_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Associate</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <form method="POST" action="{{ url_for('remove_connection') }}" class="form form-grid">
+            <div class="form-group">
+                <label for="remove_user_id">User ID</label>
+                <select name="user_id" id="remove_user_id" class="form-control" required>
+                    <option value="">Select User</option>
+                    {% for user in users %}
+                    <option value="{{ user.user_id }}">{{ user.user_id }} - {{ user.user_url[:50] }}...</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="remove_tool_id">Tool ID</label>
+                <select name="tool_id" id="remove_tool_id" class="form-control" required>
+                    <option value="">Select Tool</option>
+                    {% for tool in tools %}
+                    <option value="{{ tool.tool_id }}">{{ tool.tool_id }} - {{ tool.tool_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Remove Association</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for showing user tools -->
+<div id="toolsModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3>User Tools</h3>
+        <div id="toolsList"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showUserTools(userId) {
+        fetch(`/api/user/${userId}/tools`)
+            .then(response => response.json())
+            .then(data => {
+                const toolsList = document.getElementById('toolsList');
+                if (data.tools.length === 0) {
+                    toolsList.innerHTML = '<p>No tools associated with this user.</p>';
+                } else {
+                    let html = '<ul class="tools-list">';
+                    data.tools.forEach(tool => {
+                        html += `<li>
+                            <strong>${tool.name}</strong> 
+                            <span class="badge badge-${tool.enabled ? 'success' : 'danger'}">
+                                ${tool.enabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    toolsList.innerHTML = html;
+                }
+                document.getElementById('toolsModal').style.display = 'block';
+            })
+            .catch(error => {
+                alert('Error fetching tools: ' + error);
+            });
+    }
+
+    function closeModal() {
+        document.getElementById('toolsModal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('toolsModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

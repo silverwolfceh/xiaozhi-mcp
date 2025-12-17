@@ -3,3 +3,5 @@ requests
 cryptography
 python-dotenv
 websockets
+Flask>=2.3.0
+SQLAlchemy==1.4.53

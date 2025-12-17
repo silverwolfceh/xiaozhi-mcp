@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 from utils import get_resource_path
 import logging
+import ast
+import json
 
 logger = logging.getLogger("ToolRegistry")
 
@@ -52,3 +54,28 @@ async def execute_tool_call(tool_names : List, name: str, arguments: Dict[str, A
         raise ValueError(f"Unknown tool: {name}")
     else:
         return caller(arguments)
+
+def gen_tool_description():
+    tools = []
+    tools_dir = get_resource_path("tools")
+    for filename in os.listdir(tools_dir):
+        if filename.endswith('.py'):
+            filepath = os.path.join(tools_dir, filename)
+            with open(filepath, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+            tree = ast.parse(file_content)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    if node.name.endswith('_tool'):
+                        docstring = ast.get_docstring(node)
+                        if docstring:
+                            try:
+                                tool_info = json.loads(docstring)
+                                tools.append(tool_info)
+                            except json.JSONDecodeError:
+                                logger.warning(f"Warning: Could not parse JSON in docstring of {node.name} in {filename}")
+    return tools
+
+def get_tool_names():
+    tools = gen_tool_description()
+    return [tool['name'] for tool in tools]

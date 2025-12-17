@@ -3,15 +3,18 @@ import os
 from cryptography.fernet import Fernet
 import base64
 import sys
-import ast
-import json
+
 
 class envvarsenum:
-    MCP_JWT = "MCP_JWT"
-    PROXYENABLE = "PROXYENABLE"
-    CMC_API_KEY = "COIN_MARKETCAP_API_KEY"
+    CMC_API_KEY = "CMC_API_KEY"
+    GEMINI_API_KEY = "GEMINI_API_KEY"
+    OPENAI_API_KEY= "OPENAI_API_KEY"
+    KEY_FILE    = "mcpsecrect.key"
+    ADMIN_USER  = "ADMIN_USER"
+    ADMIN_PASSWORD = "ADMIN_PASSWORD"
 
 def get_resource_path(relative_path: str) -> str:
+    # Give you a final path from the prog direct rootory
     if getattr(sys, 'frozen', False):
         # Running as compiled executable
         base_path = os.path.dirname(sys.executable)
@@ -19,12 +22,32 @@ def get_resource_path(relative_path: str) -> str:
         # Running as a regular Python script
         base_path = os.path.dirname(os.path.abspath(__file__))
 
-
     return os.path.join(base_path, relative_path)
 
-def get_static_file(filename):
-    static_path = os.path.join("data", "static", filename)
-    fullpath = get_resource_path(static_path)
+def get_key_file():
+    """Get the path to the key file in user's home directory"""
+    home = os.path.expanduser("~")
+    key_dir = os.path.join(home, ".xiaozhi-mcp")
+    os.makedirs(key_dir, exist_ok=True)
+    key_file = os.path.join(key_dir, envvarsenum.KEY_FILE)
+    return key_file
+
+def get_persistent_data(filename):
+    # Get a persistent data file path
+    persistent_path = os.path.join("data", "persistent", filename)
+    fullpath = get_resource_path(persistent_path)
+    return fullpath
+
+def get_log_path(filename):
+    log_path = os.path.join("data", "logs", filename)
+    fullpath = get_resource_path(log_path)
+    os.makedirs(os.path.dirname(fullpath), exist_ok=True)
+    return fullpath
+
+def get_log_dir():
+    log_dir = os.path.join("data", "logs")
+    fullpath = get_resource_path(log_dir)
+    os.makedirs(fullpath, exist_ok=True)
     return fullpath
 
 def get_runtime_path(foldername = None):
@@ -34,12 +57,6 @@ def get_runtime_path(foldername = None):
     if foldername:
         fullpath = os.path.join(fullpath, foldername)
         os.makedirs(fullpath, exist_ok=True)
-    return fullpath
-
-def get_log_folder():
-    log_path = os.path.join("data", "logs")
-    fullpath = get_resource_path(log_path)
-    os.makedirs(fullpath, exist_ok=True)
     return fullpath
 
 def encrypt_password(password: str, key: str) -> str:
@@ -53,7 +70,7 @@ def decrypt_password(token: str, key: str) -> str:
     return f.decrypt(token.encode()).decode()
 
 def get_password_hash(plainpass):
-    secretfile = get_resource_path(".secrect")
+    secretfile = get_key_file()
     if os.path.isfile(secretfile):
         with open(secretfile, "r") as f:
             secretkey = f.read().strip()
@@ -69,7 +86,7 @@ def get_password_hash(plainpass):
         sys.exit(2)
 
 def get_password(encpass):
-    secretfile = get_resource_path(".secrect")
+    secretfile = get_key_file()
     if os.path.isfile(secretfile):
         with open(secretfile, "r") as f:
             secretkey = f.read().strip()
@@ -91,33 +108,29 @@ def load_env():
     else:
         print("Failed to load .env")
         sys.exit(1)
+
+    keyfile = get_key_file()
+    if not os.path.isfile(keyfile):
+        # create a key file
+        with open(keyfile, "w") as f:
+            f.write(base64.urlsafe_b64encode(Fernet.generate_key()).decode())
+            print("Key file generated. Please tell me your password")
+            yourpass = input("Your plain password (will be stripped): ").strip()
+            encpass = get_password_hash(yourpass)
+            print(f"OK, copy and paste below encrypted password to the ADMIN_PASSWORD in .env")
+            print(f"ADMIN_PASSWORD=\"{encpass}\"")
+            print("Then restart the server")
+            sys.exit(0)
+    else:
+        decpass = get_password(os.getenv(envvarsenum.ADMIN_PASSWORD, ""))
     envvars = {
-        envvarsenum.MCP_JWT            : os.getenv("MCP_JWT", ""),
-        envvarsenum.PROXYENABLE        : os.getenv("PROXYENABLE", "false").lower() == "true",
-        envvarsenum.CMC_API_KEY        : os.getenv("COIN_MARKETCAP_API_KEY", "")
+        envvarsenum.ADMIN_USER         : os.getenv(envvarsenum.ADMIN_USER, "admin"),
+        envvarsenum.ADMIN_PASSWORD     : decpass,
+        envvarsenum.CMC_API_KEY        : os.getenv(envvarsenum.CMC_API_KEY, ""),
+        envvarsenum.GEMINI_API_KEY     : os.getenv(envvarsenum.GEMINI_API_KEY, ""),
+        envvarsenum.OPENAI_API_KEY     : os.getenv(envvarsenum.OPENAI_API_KEY, "")
     }
     return envvars
-
-def gen_tool_description():
-    tools = []
-    tools_dir = get_resource_path("tools")
-    for filename in os.listdir(tools_dir):
-        if filename.endswith('.py'):
-            filepath = os.path.join(tools_dir, filename)
-            with open(filepath, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-            tree = ast.parse(file_content)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    if node.name.endswith('_tool'):
-                        docstring = ast.get_docstring(node)
-                        if docstring:
-                            try:
-                                tool_info = json.loads(docstring)
-                                tools.append(tool_info)
-                            except json.JSONDecodeError:
-                                print(f"Warning: Could not parse JSON in docstring of {node.name} in {filename}")
-    return tools
 
 if __name__ == "__main__":
     yourpass = input("Your plain password (will be stripped): ")
