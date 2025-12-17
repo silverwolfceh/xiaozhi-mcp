@@ -2,12 +2,15 @@ from worker import worker_manager
 from logcfg import setup_logging
 from database.models import User, get_session
 from monitor import monitor
+from tool_manager import tool_functions
 
 logger = setup_logging(__name__)
 
 
 if __name__ == "__main__":
-    wm = worker_manager()
+    tools = tool_functions()
+    tools.load_tools()
+    wm = worker_manager(tools)
     
     # Start database monitor to automatically manage workers
     db_monitor = monitor(wm)

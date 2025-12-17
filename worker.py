@@ -1,11 +1,13 @@
 from database.models import UserManager, ToolManager, ConnectionManager
 from xiaozhi.xiaozhiconn import xiaozhiconn
 import asyncio
+from tool_manager import tool_functions
 class worker(xiaozhiconn):
-    def __init__(self, url: str, user_id: str):
+    def __init__(self, url: str, user_id: str, tools: tool_functions):
         self.url = url
         self.user_id = user_id
         self.user = UserManager.get_by_id(user_id)
+        self.tools = tools
         super().__init__(url, True)
 
     async def mcp_proto_call_tool(self, name: str, arguments: dict):
@@ -17,10 +19,10 @@ class worker(xiaozhiconn):
             return {"status": "error", "message": f"Tool '{name}' is disabled."}
         if self.user.is_premium:
             # Execute any tool
-            pass
+            return await self.tools.execute_tool_call(name, arguments)
         elif not tool.is_premium:
             # Execute non-premium tool
-            pass
+            return await self.tools.execute_tool_call(name, arguments)
         else:
             return {"status": "error", "message": f"Tool '{name}' is premium. Please upgrade to access."}
     
@@ -28,13 +30,14 @@ class worker(xiaozhiconn):
         self.close_request = True
 
 class worker_manager:
-    def __init__(self):
+    def __init__(self, tools):
         # Format: user_id : worker_instance
         self.workers = {}
+        self.tools = tools
     
     def add_worker(self, user_id: str, url: str) -> worker:
         if user_id not in self.workers:
-            self.workers[user_id] = worker(url, user_id)
+            self.workers[user_id] = worker(url, user_id, self.tools)
             self.workers[user_id].start()
         return self.workers[user_id]
 
