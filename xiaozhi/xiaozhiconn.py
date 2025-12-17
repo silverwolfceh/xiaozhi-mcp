@@ -4,7 +4,7 @@ import asyncio
 import logging
 import random
 import json
-from utils import gen_tool_description
+from tool_manager import gen_tool_description
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ class xiaozhiconn(threading.Thread):
         self.initial_delay = 1 # seconds
         self.max_delay = 60 # seconds
         self.protocol_version = "2024-11-05"
+        self.close_request = False
         self.daemon = True  # Allow thread to exit when main program exits
 
     async def mcp_proto_initialize(self):
@@ -54,7 +55,7 @@ class xiaozhiconn(threading.Thread):
         delay = 0 if self.auto_reconnect else self.initial_delay
 
         attempt = 1
-        while True:
+        while not self.close_request:
             try:
                 # Close existing connection if any
                 await self.reset()
@@ -93,7 +94,7 @@ class xiaozhiconn(threading.Thread):
 
     async def handle_websocket_messages(self):
         """Handle incoming WebSocket messages and process MCP requests."""        
-        logger.info("[mcp] WebSocket connected → ready to receive messages")        
+        logger.info("[mcp] WebSocket connected -> ready to receive messages")        
         try:
             async for message in self.socket:
                 try:
@@ -120,6 +121,10 @@ class xiaozhiconn(threading.Thread):
                             logger.debug(f"[mcp] {args}")
                             result = await self.mcp_proto_call_tool(name, args)
                             logger.debug(f"[mcp] Tool result {result}")
+                        elif method == "ping":
+                            result = {"status": "ok"}
+                        elif method == "notifications/initialized":
+                            result = {"status": "acknowledged"}
                         else:
                             raise ValueError(f"Unknown method: {method}")
 
