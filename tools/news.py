@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from response_format import *
 import xml.etree.ElementTree as ET
 import re
-
+from bs4 import BeautifulSoup
 
 _TAG_RE = re.compile(r"<[^>]+>")
 
@@ -113,6 +113,62 @@ def extract_rss_items(parsed: Dict[str, Any]) -> List[Dict[str, Any]]:
         items.append(simple)
 
     return items
+
+def get_detail_news_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    {
+        "name": "get_detail_news",
+        "description": "Fetch detailed news content from a VNExpress article URL.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description" : "The URL of the VNExpress news article."
+                }
+            },
+            "required": ["url"]
+        }
+    }
+    """
+    url = arguments.get("url")
+    if not url:
+        return return_error_response("URL is required for get_detail_news_tool")
+
+    try:
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+    except Exception as e:
+        return return_error_response(f"Failed to fetch article: {e}")
+
+    try:
+        soup = BeautifulSoup(res.text, "html.parser")
+        # Extract the main content of the article
+        content_div = soup.find("article")
+        if not content_div:
+            return return_error_response("Article content not found")
+
+        # Extract title
+        title_tag = soup.find("h1", class_="title-detail")
+        title = title_tag.get_text(strip=True) if title_tag else "No Title"
+
+        # Extract description or summary
+        description_tag = soup.find("p", class_="description")
+        description = description_tag.get_text(strip=True) if description_tag else ""
+
+        # Extract the main content text
+        paragraphs = content_div.find_all("p")
+        content = "\n".join(p.get_text(strip=True) for p in paragraphs)
+
+        article = {
+            "title": title,
+            "description": description,
+            "content": content,
+            "url": url
+        }
+        return return_success_response(article)
+    except Exception as e:
+        return return_error_response(f"Error parsing article content: {e}")
 
 
 def get_latest_news_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:

@@ -5,6 +5,8 @@ import pkgutil
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
+import importlib.metadata
+import inspect
 from utils import get_resource_path
 import logging
 import ast
@@ -42,8 +44,15 @@ class tool_functions:
         if caller is None:
             raise ValueError(f"Unknown tool: {name}")
         else:
-            return caller(arguments)
+            if inspect.iscoroutinefunction(caller):
+                return await caller(arguments)
 
+            result = caller(arguments)
+
+            # In case a sync wrapper returns a coroutine for some reason
+            if inspect.isawaitable(result):
+                return await result
+    
 def gen_tool_description():
     tools = []
     tools_dir = get_resource_path("tools")
@@ -54,7 +63,7 @@ def gen_tool_description():
                 file_content = f.read()
             tree = ast.parse(file_content)
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if node.name.endswith('_tool'):
                         docstring = ast.get_docstring(node)
                         if docstring:
