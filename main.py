@@ -1,13 +1,17 @@
+from flask import logging
 from worker import worker_manager
 from logcfg import setup_logging
 from database.models import User, get_session
 from monitor import monitor
 from tool_manager import tool_functions
+from utils import get_log_dir
+import logging
 
-logger = setup_logging(__name__)
+logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
+    setup_logging(get_log_dir(), logging.DEBUG, "hub.log")
     tools = tool_functions()
     tools.load_tools()
     wm = worker_manager(tools)

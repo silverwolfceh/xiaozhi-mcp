@@ -3,12 +3,12 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-def setup_logging(log_dir="logs", log_level=logging.INFO):
+def setup_logging(log_dir="logs", log_level=logging.INFO, logfile = "app.log"):
     """Set up logging configuration for the entire application."""
     # Makedirs
     os.makedirs(log_dir, exist_ok=True)
     # Create log filename with basic information
-    log_file = os.path.join(log_dir, "app.log")
+    log_file = os.path.join(log_dir, logfile)
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
