@@ -11,6 +11,7 @@ class worker(xiaozhiconn):
         super().__init__(url, True)
 
     async def mcp_proto_call_tool(self, name: str, arguments: dict):
+        arguments['notification'] = self.progress_notification
         """Execute a tool call and return the result."""
         tool = ToolManager.get_by_name(name)
         if not tool:

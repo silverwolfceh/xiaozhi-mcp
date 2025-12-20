@@ -19,6 +19,9 @@ class xiaozhiconn(threading.Thread):
         self.protocol_version = "2024-11-05"
         self.close_request = False
         self.daemon = True  # Allow thread to exit when main program exits
+        self.reqid = 0
+        self._meta = {}
+        self.last_tool_name = ""
 
     async def mcp_proto_initialize(self):
         """Return the JSON-RPC initialize response."""
@@ -92,6 +95,27 @@ class xiaozhiconn(threading.Thread):
             delay = min(delay * 2, self.max_delay) if delay > 0 else 0
             attempt += 1
 
+    async def progress_notification(self, message: str, progress: int):
+        # return
+        """Send a progress notification through the WebSocket."""
+        if self.socket is not None:
+            notification = {
+                "id" : self.reqid,
+                "jsonrpc": "2.0",
+                "method": "tool/progress",
+                "params": {
+                    "name" : self.last_tool_name,
+                    "message": message,
+                    "progress": progress
+                },
+                "_meta": self._meta
+            }
+            try:
+                await self.socket.send(json.dumps(notification))
+                logger.debug(f"[mcp] Sent progress notification: {notification}")
+            except Exception as e:
+                logger.error(f"[mcp] Failed to send progress notification: {e}")
+
     async def handle_websocket_messages(self):
         """Handle incoming WebSocket messages and process MCP requests."""        
         logger.info("[mcp] WebSocket connected -> ready to receive messages")        
@@ -114,9 +138,14 @@ class xiaozhiconn(threading.Thread):
                         elif method == "tools/list":
                             result = await self.mcp_proto_list_tools()
                         elif method == "tools/call":
+                            print(payload)
+                            self.reqid = payload.get("id")
+                            
                             params = payload.get("params", {}) or {}
                             name = params.get("name")
                             args = params.get("arguments", {}) or {}
+                            self._meta = params.get("_meta", {})
+                            self.last_tool_name = name
                             logger.info(f"[mcp] Executing tool: {name}")
                             logger.debug(f"[mcp] {args}")
                             result = await self.mcp_proto_call_tool(name, args)
@@ -124,6 +153,7 @@ class xiaozhiconn(threading.Thread):
                         elif method == "ping":
                             result = {"status": "ok"}
                         elif method == "notifications/initialized":
+                            logger.debug(payload)
                             result = {"status": "acknowledged"}
                         else:
                             raise ValueError(f"Unknown method: {method}")

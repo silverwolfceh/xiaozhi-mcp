@@ -6,3 +6,9 @@ def return_chain_to_terminal(command, background):
 
 def return_error_response(message):
     return {"content" : [{"type" : "text", "text" : f"[Error] {message}"}]}
+
+async def send_progress_notification(notifunc, message: str, progress: int):
+    """Send progress notification if notification callback is provided."""
+    """TODO: Xiaozhi not support this type of notification yet."""
+    if notifunc and callable(notifunc):
+        await notifunc(message, progress)
