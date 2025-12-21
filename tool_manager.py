@@ -43,16 +43,18 @@ class tool_functions:
         caller = self.get_caller(name)
         if caller is None:
             raise ValueError(f"Unknown tool: {name}")
+
+        if inspect.iscoroutinefunction(caller):
+            return await caller(arguments)
+
+        result = caller(arguments)
+
+        # In case a sync wrapper returns a coroutine for some reason
+        if inspect.isawaitable(result):
+            return await result
         else:
-            if inspect.iscoroutinefunction(caller):
-                return await caller(arguments)
+            return result
 
-            result = caller(arguments)
-
-            # In case a sync wrapper returns a coroutine for some reason
-            if inspect.isawaitable(result):
-                return await result
-    
 def gen_tool_description():
     tools = []
     tools_dir = get_resource_path("tools")
