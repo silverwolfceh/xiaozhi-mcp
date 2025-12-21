@@ -170,6 +170,27 @@ def get_detail_news_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         return return_error_response(f"Error parsing article content: {e}")
 
+def new_category_to_rss_url(category: str) -> str:
+    base_url = "https://vnexpress.net/rss/"
+    category_map = {
+        "world" : "the-gioi.rss",
+        "business" : "kinh-doanh.rss",
+        "entertainment" : "giai-tri.rss",
+        "sports" : "the-thao.rss",
+        "law" : "phap-luat.rss",
+        "education" : "giao-duc.rss",
+        "latest" : "tin-moi-nhat.rss",
+        "popular" : "tin-noi-bat.rss",
+        "health" : "suc-khoe.rss",
+        "lifestyle" : "gia-dinh.rss",
+        "travel" : "du-lich.rss",
+        "technology" : "khoa-hoc-cong-nghe.rss",
+        "vehicle" : "oto-xe-may.rss",
+        "funny" : "cuoi.rss",
+        "most_read" : "tin-xem-nhieu.rss",
+        "current_affairs" : "thoi-su.rss"
+    }
+    return base_url + category_map.get(category, "tin-moi-nhat.rss")
 
 def get_latest_news_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -179,16 +200,35 @@ def get_latest_news_tool(arguments: Dict[str, Any]) -> Dict[str, Any]:
         "inputSchema": {
             "type": "object",
             "properties": {
-                "url": {
+                "category": {
                     "type": "string",
-                    "description" : "The RSS feed URL to fetch news from."
+                    "enum" : [
+                        "world",
+                        "business",
+                        "entertainment",
+                        "sports",
+                        "law",
+                        "education",
+                        "latest",
+                        "popular",
+                        "health",
+                        "lifestyle",
+                        "travel",
+                        "technology",
+                        "vehicle",
+                        "funny",
+                        "most_read",
+                        "current_affairs"
+                    ],
+                    "description" : "News category to fetch"
                 }
             },
-            "required": []
+            "required": ["category"]
         }
     }
     """
-    url = arguments.get("url", "https://vnexpress.net/rss/tin-moi-nhat.rss")
+    category = arguments.get("category", "latest")
+    url = new_category_to_rss_url(category)
     try:
         res = requests.get(url, timeout=10)
         res.raise_for_status()
